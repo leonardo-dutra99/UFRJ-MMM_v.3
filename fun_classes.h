@@ -406,15 +406,16 @@ switch_unemployment_benefits
 	v[3]=V("class_wage_share");                            			  	//wage share of each class
 	v[4]=V("Class_Deposits_Return");                                  	//interest receivment
 	v[5]=VS(government,"Government_Effective_Unemployment_Benefits"); 	//unemployment benefits (never taxed)
+	v[20]=VS(government,"Check_Payments_Effective");
 
 		v[17]=MAXS(PARENT, "class_wage_share");				 		 	//search the lowest value of nominal income in the last period
 		cur=SEARCH_CNDS(PARENT, "class_wage_share", v[17] );  			//search the class with nominal income equal to the lowest value
 		v[18]=VS(cur,"class_id");									 	//identify lowest income class
 		v[16]=V("class_id");                                          	//current object id
-		if(v[16]==v[18])                                              	//if current object is the one with minimum income
-			v[6]=v[0]*v[2]+v[1]*v[3]+v[5];     		          	//class' gross total income, including unemployment benefits
+		if(v[16]==v[17])                                              	//if current object is the one with minimum income
+			v[6]=v[0]*v[2]+v[1]*v[3]+v[5]+(v[20]/3);     		          	//class' gross total income, including unemployment benefits
 		else                                                          	//if it is not
-			v[6]=v[0]*v[2]+v[1]*v[3];                            	//class' gross total income excluding unemployment benefits
+			v[6]=v[0]*v[2]+v[1]*v[3]+(v[20]/3);                            	//class' gross total income excluding unemployment benefits // pensar na divisão dos cheques para as classes
 	
 	v[7]=V("switch_class_tax_structure");                 			 	//defines taxation structure
 	v[8]=V("class_direct_tax");                            				//class tax rate

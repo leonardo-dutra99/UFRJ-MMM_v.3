@@ -1,5 +1,25 @@
 /*****GOVERNMENT DECISION VARIABLES*****/
 
+EQUATION("Check_Payments")
+	v[1]=VL("Country_Real_GDP",2);	
+	v[2]=VL("Country_Real_GDP",3);
+	v[3]=-(v[1]-v[2]); // checar se o penúltimo trimestre foi de recessão
+	v[10]=V("check_rate");
+	if(max(0, v[3])>0)
+		{
+		v[4]=VL("Country_Real_GDP",1);
+		v[5]=VL("Country_Real_GDP",2);	
+		v[6]=-(v[4]-v[5]);
+		v[7]=max(0, v[6]); // chechar se o último trimestre foi de recessão
+		v[8]=VL("Country_Nominal_Consumption_Production",1);
+		v[9]=v[7] != 0? v[8]*v[10] : 0;
+		}
+	else
+		v[9]=0;
+
+RESULT(v[9])
+
+
 EQUATION("Government_Desired_Wages")
 /*
 Priority expenses.
@@ -12,14 +32,10 @@ RESULT(max(0,v[2]))
 
 
 EQUATION("Government_Desired_Unemployment_Benefits")
-/*
-Counter-cyclical Expenses
-Benefit is a share of average wage. 
-The amount depends on current unemployment.
-*/
-	v[0]=V("government_benefit_rate");
+v[0]=V("government_benefit_rate");
 	v[1]=0;
-	CYCLES(country, cur, "SECTORS")
+
+	/*CYCLES(country, cur, "SECTORS")
 	{
 		v[2]=VS(cur, "sector_desired_degree_capacity_utilization");
 		v[3]=VLS(cur, "Sector_Idle_Capacity", 1);
@@ -29,9 +45,23 @@ The amount depends on current unemployment.
 		v[7]=VLS(cur, "Sector_Avg_Productivity", 1);
 		v[8]=VLS(cur, "Sector_Avg_Wage", 1);
 		v[9]=v[6]*(v[0]*v[8]/v[7]);
+		// avaliando se o país está em recessão //
+		v[10]=VL("Country_Real_GDP",1); // talvez expandir pra 2 trimestres
+		v[11]=VL("Country_Real_GDP",2);
+		v[12]=-(v[10]-v[11]);
+		v[13]=max(0, v[12]); // se for maior que 0, país está em recessão
+		v[14]=V("bonus_UB");
+		if(v[13] > 0) // se país em recessão, aumenta o seguro desemprego em 25%
+			{
+			v[1]=v[1] + v[14] * v[9];
+			}
+		else
 		v[1]=v[1]+v[9];
-	}
+		}
 	
+
+
+*/
 	v[1]=0;
 	CYCLES(country, cur, "SECTORS")
 	{
@@ -39,10 +69,26 @@ The amount depends on current unemployment.
 		v[3]=VLS(cur, "Sector_Employment",2);
 		v[4]=-(v[2]-v[3]);
 		v[5]=max(0, v[4]);
-		v[8]=VLS(cur, "Sector_Avg_Wage", 1);
-		v[9]=v[5]*(v[0]*v[8]);
+		v[6]=V("Minimum_Wage");
+		v[8]=VLS(cur, "Sector_Avg_Wage", 1); // trocar por salário mínimo
+		if(v[6] == 0)
+			v[9]=v[5]*(v[0]*v[8]);
+		else
+			v[9]=v[5]*(v[0]*v[6]); // avaliar com e sem salário mínimo (v[8])
+		// avaliando se o país está em recessão //
+		v[10]=VL("Country_Real_GDP",1); // talvez expandir pra 2 trimestres
+		v[11]=VL("Country_Real_GDP",2);
+		v[12]=-(v[10]-v[11]);
+		v[13]=max(0, v[12]); // se for maior que 0, país está em recessão
+		v[14]=V("bonus_UB");
+		if(v[13] > 0) // se país em recessão, aumenta o seguro desemprego em 25%
+			{
+			v[1]=v[1] + v[14] * v[9];
+			}
+		else
 		v[1]=v[1]+v[9];
-	}	
+		}
+
 RESULT(max(0,v[1]))
 
 
@@ -192,6 +238,7 @@ v[2]=V("Government_Desired_Unemployment_Benefits");
 v[3]=V("Government_Desired_Consumption");
 v[4]=V("Government_Desired_Investment");
 v[5]=V("Government_Desired_Inputs");
+v[6]=V("Check_Payments"); //**
 
 if(v[0]==-1)                                               //no fiscal rule
 {
@@ -199,16 +246,18 @@ if(v[0]==-1)                                               //no fiscal rule
 	v[9]=v[2];    										   //government unemployment benefits equal 0
 	v[10]=v[3];                                            //government consumption equal desired
 	v[11]=v[5];                                            //government intermediate equal desired
-	v[15]=v[4];                                            //government investment demand equals desired
+	v[15]=v[4];											   //government investment demand equals desired
+	v[16]=v[6];                                            //checks payment not limited**
 }
 else
 {
 		v[8]=min(v[0],v[1]);								   //government wages is desired limited by maximum expenses
 		v[9]=min(v[2],(v[0]-v[8]));    						   //government unemployment benefits is desired limited by maximum expenses minus wages
-		v[10]=min(v[3],(v[0]-v[8]-v[9]));       			   //government consumption is desired limited by maximum expenses minus wages and benefits
-		v[11]=min(v[5],(v[0]-v[8]-v[9]-v[10]));        		   //government intermediate is desired limited by maximum expenses minus wages and benefits
-		v[12]=min(v[4],(v[0]-v[8]-v[9]-v[10]-v[11]));          //government investment is desired limited by maximum expenses minus wages and benefits
-		v[14]=max(0,(v[0]-(v[8]+v[9]+v[10]+v[11]+v[12])));
+		v[16]=min(v[6],v[0]-v[8]-v[9]);
+		v[10]=min(v[3],(v[0]-v[8]-v[16]-v[9]));       			   //government consumption is desired limited by maximum expenses minus wages and benefits
+		v[11]=min(v[5],(v[0]-v[8]-v[16]-v[9]-v[10]));        		   //government intermediate is desired limited by maximum expenses minus wages and benefits
+		v[12]=min(v[4],(v[0]-v[8]-v[16]-v[9]-v[10]-v[11]));          //government investment is desired limited by maximum expenses minus wages and benefits
+		v[14]=max(0,(v[0]-(v[8]+v[16]+v[9]+v[10]+v[11]+v[12])));
 		if(V("switch_extra_gov_expenses")==1)
 			v[15]=v[12]+v[14];
 		else
@@ -220,7 +269,8 @@ WRITE("Government_Effective_Consumption",  max(0,v[10]));
 WRITE("Government_Effective_Investment",  max(0,v[15]));
 WRITE("Government_Effective_Inputs",  max(0,v[11]));
 WRITE("Government_Desired_Expenses",  v[1]+v[2]+v[3]+v[4]+v[5]);
-v[13]=max(0,(v[8]+v[9]+v[10]+v[11]+v[15]));
+WRITE("Check_Payments_Effective",  max(0,v[16])); //**
+v[13]=max(0,(v[8]+v[9]+v[10]+v[11]+v[15]+v[16]));
 RESULT(v[13])
 
 EQUATION_DUMMY("Government_Effective_Wages","Government_Effective_Expenses")
@@ -229,6 +279,8 @@ EQUATION_DUMMY("Government_Effective_Consumption","Government_Effective_Expenses
 EQUATION_DUMMY("Government_Effective_Investment","Government_Effective_Expenses")
 EQUATION_DUMMY("Government_Effective_Inputs","Government_Effective_Expenses")
 EQUATION_DUMMY("Government_Desired_Expenses","Government_Effective_Expenses")
+EQUATION_DUMMY("Check_Payments_Effective","Government_Effective_Expenses")
+
 
 /*****GOVERNMENT RESULT VARIABLES*****/
 

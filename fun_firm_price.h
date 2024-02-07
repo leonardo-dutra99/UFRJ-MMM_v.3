@@ -1,4 +1,15 @@
+/*
+Salário mínimo
+*/
 
+EQUATION("Minimum_Wage")
+	v[0]=CURRENT;
+	v[1]=WHTAVEL("Sector_Avg_Wage","Sector_Participation",1);
+	v[2]=V("minimum_wage_rate");
+	v[3]=v[1]*v[2];
+	v[4]=max(v[0],v[3]);
+
+RESULT(v[4])
 
 EQUATION("Firm_Price_Period")
 /*
@@ -36,7 +47,7 @@ Nominal Wage of the firm. It increases year by year depending on inflation and f
 		}
 	else                                                                             	 //if the rest of the division is not zero, do not adjust wages
 		v[10]=v[0];                                                                      //current wages will be the last period's
-RESULT(v[10])
+RESULT(max(v[10],V("Minimum_Wage")))
 
 
 EQUATION("Firm_Input_Cost")
